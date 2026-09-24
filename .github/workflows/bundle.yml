@@ -1,0 +1,65 @@
+name: Bundle standalone tools
+
+# Manually triggered: pulls the *latest* published release asset from each of
+# the six standalone tool repos (they each publish their own release
+# independently, tagged with their own version numbers -- there's no shared
+# version across repos to key off automatically) and republishes them all
+# together as one release here, in one directory layout, so a user extracting
+# the zip gets every tool in the same folder. That matters because each
+# standalone exe resolves its data directory relative to its own exe path
+# (`roc_desk_core::paths::portable_data_dir`, same convention the full
+# roc_desk.exe host uses) -- putting them in one folder is what makes them
+# share one `.rock_desk` data directory instead of six separate ones.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.3.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download latest release asset from each tool repo
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $repos = @(
+            "roc_desk-ssh",
+            "roc_desk-sql",
+            "roc_desk-workspace",
+            "roc_desk-http",
+            "roc_desk-editor",
+            "roc_desk-explorer"
+          )
+          New-Item -ItemType Directory -Force bundle | Out-Null
+          foreach ($repo in $repos) {
+            Write-Host "Downloading latest release from swimhigh/$repo..."
+            gh release download --repo "swimhigh/$repo" -p "*.exe" -p "*.LICENSE.txt" --dir bundle --clobber
+            if ($LASTEXITCODE -ne 0) { throw "gh release download failed for $repo" }
+          }
+          Get-ChildItem bundle
+
+      - name: Zip bundle
+        shell: pwsh
+        run: Compress-Archive -Path bundle\* -DestinationPath roc_desk-tools-bundle.zip -Force
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.tag }}
+          files: roc_desk-tools-bundle.zip
+          body: |
+            批量打包各工具最新的独立可执行文件——解压到同一个目录下运行，
+            它们会共享同一个 `.rock_desk` 数据目录（和完整版 roc_desk.exe 的
+            便携部署约定一致）。
+
+            打包时各工具的版本（详见各自仓库的 Releases）：见 workflow run 日志。
