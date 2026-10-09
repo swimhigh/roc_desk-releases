@@ -99,10 +99,19 @@ if ($Unregister) {
   foreach ($ext in $associations.Keys) {
     $progId = "$progIdPrefix.$($ext.TrimStart('.'))"
     Remove-Item -Path "HKCU:\Software\Classes\$progId" -Recurse -Force -ErrorAction SilentlyContinue
-    $extKey = "HKCU:\Software\Classes\$ext"
-    if (Test-Path $extKey) {
-      $current = (Get-ItemProperty -Path $extKey -Name "(Default)" -ErrorAction SilentlyContinue).'(Default)'
-      if ($current -eq $progId) { Remove-ItemProperty -Path $extKey -Name "(Default)" -Force -ErrorAction SilentlyContinue }
+
+    # A registry key's unnamed "(Default)" value is actually named "" --
+    # `Get-ItemProperty`/`Remove-ItemProperty -Name "(Default)"` only read
+    # it (PowerShell's display convention), they silently fail to DELETE it
+    # (`Remove-ItemProperty -Name "(Default)"` errors with "Property
+    # (Default) does not exist", and `-Name ""` is rejected as an empty
+    # argument) -- confirmed by testing, this left every extension's
+    # default value dangling at the just-deleted ProgID instead of clearing
+    # it. The underlying .NET registry API has no such restriction.
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("Software\Classes\$ext", $true)
+    if ($key) {
+      if ($key.GetValue("") -eq $progId) { $key.DeleteValue("", $false) }
+      $key.Close()
     }
     Write-Output "  removed $progId ($ext)"
   }
