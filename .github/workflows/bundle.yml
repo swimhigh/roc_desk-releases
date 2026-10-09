@@ -47,6 +47,10 @@ jobs:
           }
           Get-ChildItem bundle
 
+      - name: Add file-association registration script
+        shell: pwsh
+        run: Copy-Item register-file-associations.ps1 bundle\
+
       - name: Zip bundle
         shell: pwsh
         run: Compress-Archive -Path bundle\* -DestinationPath roc_desk-tools-bundle.zip -Force
@@ -61,5 +65,13 @@ jobs:
             批量打包各工具最新的独立可执行文件——解压到同一个目录下运行，
             它们会共享同一个 `.rock_desk` 数据目录（和完整版 roc_desk.exe 的
             便携部署约定一致）。
+
+            解压后可以运行 `register-file-associations.ps1` 把常见文本类
+            扩展名（.txt/.log/.md/.json/.yaml/.ini/.conf/.cfg/.xml/.csv）
+            关联到 `roc_desk-editor.exe`、`.sql` 关联到 `roc_desk-sql.exe`，
+            双击对应文件会直接用这里的工具打开（只注册当前用户，不需要
+            管理员权限）。已经有系统默认关联的扩展名（比如 `.txt` 默认是
+            记事本）Windows 不允许脚本静默覆盖，需要手动右键"打开方式"
+            选一次并勾选"始终使用此应用"——脚本运行完会打印这个提示。
 
             打包时各工具的版本（详见各自仓库的 Releases）：见 workflow run 日志。

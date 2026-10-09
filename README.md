@@ -18,6 +18,26 @@
 当前版本用于迁移阶段的人工启动验证，业务功能仍在持续接入。各工具自己的构建脚本
 位于对应仓库的 `build-standalone.ps1`。
 
+## Windows 文件类型关联（register-file-associations.ps1）
+
+解压 release 包到一个目录后，在该目录里运行：
+
+```powershell
+.\register-file-associations.ps1
+```
+
+把常见文本类扩展名（.txt/.log/.md/.json/.yaml/.yml/.ini/.conf/.cfg/.xml/.csv）
+关联到 `roc_desk-editor.exe`、`.sql` 关联到 `roc_desk-sql.exe`——双击这些文件
+会直接用对应工具打开（只写入当前用户的注册表项，不需要管理员权限）。`roc_desk-
+editor`/`roc_desk-sql` 从 v0.2.13/v0.3.9 起支持接收命令行传入的文件路径并
+自动打开（和完整版 `roc_desk.exe` 的"打开方式"机制同一套实现）。
+
+加 `-Unregister` 可以撤销这些关联。注意 Windows 从 8 开始不允许脚本静默覆盖
+已经有系统默认关联的扩展名（最常见的是 `.txt` 默认是记事本）——这类扩展名
+脚本跑完之后，还需要手动右键文件 → "打开方式" → 选对应的 roc_desk 工具 →
+勾选"始终使用此应用"，这是 Windows 自己的防劫持保护，脚本做不到绕过。没有
+系统默认值的扩展名（大多数本列表里的类型）会立即生效，不需要这一步。
+
 ## 批量打包（.github/workflows/bundle.yml）
 
 六个工具各自在自己的仓库独立发版（各自的 CI `build-standalone.yml`，标签号互不
