@@ -19,9 +19,10 @@
     .sql                                                     -> roc_desk-sql.exe
 
   Run this script from the directory the exes actually live in (the
-  extracted release zip, or roc_desk-releases\bundle\ for local testing) --
-  it resolves tool paths relative to its own location, not relative to the
-  current working directory.
+  extracted release zip), or from roc_desk-releases\ with the exes in its
+  bundle\ subfolder (local testing) -- it auto-detects which of the two
+  layouts it's sitting in by checking for roc_desk.exe, and resolves tool
+  paths from there, not from the current working directory.
 
   IMPORTANT WINDOWS LIMITATION (tested on Windows 11): since Windows 8,
   Explorer protects a user's existing "default app" choice for an extension
@@ -60,7 +61,15 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-$toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# Exes may sit directly next to this script (extracted release zip) or one
+# level down in bundle\ (local dev build) -- prefer whichever actually
+# contains roc_desk.exe so paths written to the registry are correct.
+$toolsDir = $scriptDir
+if (-not (Test-Path (Join-Path $scriptDir "roc_desk.exe")) -and (Test-Path (Join-Path $scriptDir "bundle\roc_desk.exe"))) {
+  $toolsDir = Join-Path $scriptDir "bundle"
+}
 
 # ProgID prefix -- kept short and namespaced so it's obvious in regedit which
 # entries belong to roc_desk if someone goes looking, and so it can't collide
